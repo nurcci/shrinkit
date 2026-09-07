@@ -3,3 +3,5 @@ pytest==8.4.2
 pytest-asyncio==0.25.2
 httpx==0.28.1
 ruff==0.16.6
+fakeredis==2.37.1
+aiosqlite==0.22.1

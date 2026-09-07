@@ -15,6 +15,16 @@ services:
       timeout: 3s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   api:
     build: .
     # переопределяем CMD из Dockerfile: локально хотим автоперезагрузку при правке кода,
@@ -22,10 +32,16 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       DATABASE_URL: postgresql+asyncpg://shrinkit:shrinkit@db:5432/shrinkit
+      REDIS_URL: redis://redis:6379/0
+      # порт 8000 на этой машине занят другим контейнером (file_scanner_backend),
+      # поэтому наружу пробрасываем 8001 — внутри контейнера uvicorn как и был, на 8000
+      BASE_URL: http://localhost:8001
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./app:/app/app

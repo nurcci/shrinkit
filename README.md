@@ -15,7 +15,7 @@ Python, FastAPI, SQLAlchemy (async), PostgreSQL, Docker / Docker Compose.
     docker compose up -d --build
     docker compose exec api python -m app.init_db   # один раз — создаёт таблицы
 
-Swagger-документация: http://localhost:8000/docs
+Swagger-документация: http://localhost:8001/docs
 
 ## Тесты
 
