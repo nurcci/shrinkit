@@ -1,9 +1,12 @@
 import hashlib
 import uuid
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,11 +19,12 @@ from app.redis_client import get_redis
 
 settings = get_settings()
 
-# Современный способ объявлять FastAPI-зависимости: Depends живёт внутри Annotated,
-# а не в значении по умолчанию аргумента (и ruff/B008 не ругается на "вызов
-# функции в дефолте").
+# Depends живёт внутри Annotated, а не в значении по умолчанию аргумента —
+# так ruff/B008 не ругается на "вызов функции в дефолте".
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 RedisSession = Annotated[Redis, Depends(get_redis)]
+
+BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
     title="ShrinkIt",
@@ -28,11 +32,18 @@ app = FastAPI(
     version="0.2.0",
 )
 
+# веб-интерфейс поверх JSON API ниже: форма создаёт ссылку через fetch к /links
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+
+@app.get("/", include_in_schema=False)
+async def index(request: Request):
+    return templates.TemplateResponse(request, "index.html", {})
+
 
 async def enforce_rate_limit(request: Request, redis_client: RedisSession) -> None:
-    """Зависимость-страж перед POST /links: не больше N запросов с одного IP
-    за скользящее окно. Подключается через dependencies=[...] в декораторе
-    роута — самому эндпоинту не нужно ничего знать про rate limiting."""
+    """Страж перед POST /links — самому эндпоинту не нужно знать про лимиты."""
     client_ip = request.client.host if request.client else "unknown"
     allowed = await is_allowed(redis_client, f"ratelimit:create_link:{client_ip}")
     if not allowed:
@@ -44,9 +55,8 @@ async def enforce_rate_limit(request: Request, redis_client: RedisSession) -> No
 
 @app.get("/health", tags=["service"])
 async def health() -> dict[str, str]:
-    """Проверка живости сервиса — её дёргают Docker healthcheck и балансировщик деплоя.
-    Никогда не трогает БД/Redis: если что-то из хранилищ прилегло, health всё равно
-    должен ответить, чтобы было видно, что упало именно хранилище, а не всё приложение."""
+    """Проверка живости — Docker healthcheck и балансировщик деплоя. Не трогает
+    БД/Redis, чтобы было видно, что упало именно хранилище, а не всё приложение."""
     return {"status": "ok"}
 
 
@@ -59,8 +69,7 @@ async def health() -> dict[str, str]:
 )
 async def create_link(payload: schemas.ShortLinkCreate, db: DbSession, redis_client: RedisSession):
     link = await crud.create_short_link(db, str(payload.target_url))
-    # Write-through: кладём в кэш сразу при создании, а не ждём первого редиректа —
-    # тогда самый первый переход по свежей ссылке тоже будет попаданием в кэш.
+    # write-through: кэшируем сразу, чтобы и первый переход попал в кэш
     await set_cached_link(redis_client, link)
     return schemas.ShortLinkOut(
         slug=link.slug,
@@ -72,10 +81,7 @@ async def create_link(payload: schemas.ShortLinkCreate, db: DbSession, redis_cli
 
 @app.get("/links/{slug}/stats", response_model=schemas.StatsOut, tags=["links"])
 async def stats(slug: str, db: DbSession):
-    # Зарегистрирован раньше "/{slug}", хотя такое короткое совпадение здесь
-    # и не критично: у него три сегмента пути, а "/{slug}" ловит только один.
-    # Статистику всегда читаем из Postgres, а не из кэша — total_clicks должен
-    # быть свежим, а не тем, что было на момент последнего кэширования ссылки.
+    # читаем из Postgres, не из кэша — total_clicks должен быть свежим
     result = await crud.get_stats(db, slug)
     if result is None:
         raise HTTPException(status_code=404, detail="Такой ссылки нет")

@@ -13,7 +13,7 @@ def _cache_key(slug: str) -> str:
 
 
 async def get_cached_link(redis_client: Redis, slug: str) -> dict | None:
-    """Cache-aside чтение: None означает промах, дальше идём в Postgres."""
+    """None — промах, идём в Postgres."""
     raw = await redis_client.get(_cache_key(slug))
     return json.loads(raw) if raw else None
 

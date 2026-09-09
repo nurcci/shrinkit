@@ -11,7 +11,7 @@ settings = get_settings()
 
 
 async def create_short_link(db: AsyncSession, target_url: str) -> models.ShortLink:
-    for _ in range(5):  # 5 попыток на случай редкой коллизии слага
+    for _ in range(5):  # на случай редкой коллизии слага
         slug = generate_slug(settings.slug_length)
         taken = await db.scalar(select(models.ShortLink.id).where(models.ShortLink.slug == slug))
         if taken is None:

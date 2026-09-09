@@ -25,8 +25,8 @@ class ShortLink(Base):
 
 
 class ClickEvent(Base):
-    """Один переход по короткой ссылке. Строк тут будет на порядки больше,
-    чем в short_links, поэтому сразу ставим составной индекс под будущую агрегацию."""
+    """Один переход по ссылке. Строк на порядки больше, чем в short_links —
+    поэтому сразу составной индекс под агрегацию."""
 
     __tablename__ = "click_events"
     __table_args__ = (Index("ix_click_events_link_created", "link_id", "created_at"),)

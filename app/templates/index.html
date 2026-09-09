@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShrinkIt</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%234f8cff%22/></svg>">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">ShrinkIt</span>
+    <a href="/docs" class="topbar-link">API</a>
+  </header>
+
+  <main class="page">
+    <h1>Сократи ссылку</h1>
+    <p class="lead">Вставь длинный URL — получишь короткий, с учётом переходов.</p>
+
+    <form id="shorten-form" class="shorten-form">
+      <input type="url" id="target-url" placeholder="https://example.com/very/long/path" required>
+      <button type="submit" class="btn">Сократить</button>
+    </form>
+
+    <div id="error-box" class="message message-error" hidden></div>
+
+    <div id="history"></div>
+  </main>
+
+  <template id="link-row-template">
+    <div class="link-row">
+      <div class="link-row-main">
+        <a class="short-url" target="_blank" rel="noopener"></a>
+        <span class="target-url"></span>
+      </div>
+      <div class="link-row-actions">
+        <button class="btn-ghost copy-btn">Копировать</button>
+        <button class="btn-ghost stats-btn">Переходы: <span class="clicks">—</span></button>
+      </div>
+    </div>
+  </template>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

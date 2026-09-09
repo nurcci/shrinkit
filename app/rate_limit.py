@@ -8,15 +8,10 @@ settings = get_settings()
 
 
 async def is_allowed(redis_client: Redis, key: str) -> bool:
-    """Sliding-window лимитер поверх отсортированного множества Redis:
-    не больше rate_limit_max_requests за последние rate_limit_window_seconds.
-
-    Почему не классический token bucket на Lua-скрипте (EVAL): fakeredis,
-    которым гоняются тесты, не поддерживает EVAL без отдельной Lua-прослойки —
-    тащить её ради одного счётчика было бы лишней хрупкой зависимостью.
-    Атомарность здесь даёт не Lua, а Redis-транзакция (MULTI/EXEC): весь
-    пайплайн ниже либо выполняется целиком, либо не выполняется вовсе.
-    """
+    """Sliding-window лимитер на ZSET: не больше rate_limit_max_requests за
+    последние rate_limit_window_seconds. MULTI/EXEC вместо Lua-скрипта —
+    fakeredis в тестах не тянет EVAL, а тащить Lua ради одного счётчика
+    того не стоит."""
     now = time.time()
     window = settings.rate_limit_window_seconds
 

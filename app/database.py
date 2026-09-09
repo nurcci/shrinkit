@@ -5,20 +5,16 @@ from app.config import get_settings
 
 settings = get_settings()
 
-# pool_pre_ping проверяет соединение перед использованием — спасает от "battery died"
-# ошибок, если Postgres перезапускался, а пул держал протухшее соединение.
+# pool_pre_ping спасает от "мёртвых" соединений, если Postgres перезапускался
 engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
-    """Общий предок всех ORM-моделей. SQLAlchemy собирает метаданные таблиц
-    (Base.metadata) по всем классам-наследникам — это то, что использует
-    init_db.py для создания таблиц."""
+    """Общий предок ORM-моделей — по нему init_db.py находит все таблицы."""
 
 
 async def get_db() -> AsyncSession:
-    """FastAPI-зависимость (Depends): открывает одну сессию на запрос
-    и гарантированно закрывает её по завершении, даже если внутри было исключение."""
+    """Одна сессия на запрос, закрывается сама по завершении."""
     async with AsyncSessionLocal() as session:
         yield session

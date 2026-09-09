@@ -12,10 +12,8 @@ from app.redis_client import get_redis
 
 @pytest_asyncio.fixture
 async def test_engine():
-    # Отдельная in-memory SQLite на каждый тест — быстро и без Docker. Именно
-    # поэтому это тест сервисного слоя, а не полноценный e2e: диалект БД
-    # отличается от боевого Postgres (реальный Postgres/Redis мы уже
-    # проверили вручную через docker compose + Swagger).
+    # in-memory SQLite на каждый тест — быстро и без Docker (диалект другой,
+    # чем боевой Postgres, поэтому это не полноценный e2e)
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
