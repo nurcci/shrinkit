@@ -1,0 +1,18 @@
+# Render Blueprint — бесплатный деплой одним сервисом, тот же паттерн,
+# что и в TicketHub. Postgres — на Neon, Redis — на Upstash (оба бесплатны
+# навсегда); их DATABASE_URL/REDIS_URL прописываются руками в Render
+# Dashboard (sync: false ниже). Порядок действий — в README → «Деплой».
+services:
+  - type: web
+    name: shrinkit
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: sh bin/start-prod.sh
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
